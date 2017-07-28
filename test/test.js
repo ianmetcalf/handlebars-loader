@@ -122,6 +122,23 @@ describe('handlebars-loader', function () {
     });
   });
 
+  it('should convert decorators into require statements', function (done) {
+    testTemplate(loader, './with-decorators.handlebars', {
+      stubs: {
+        './decorator': function(fn) { return fn; },
+        'decorator': function(fn) { return fn; }
+      },
+      data: TEST_TEMPLATE_DATA
+    }, function (err, output, require) {
+      assert.ok(output, 'generated output');
+      assert.ok(require.calledWith('decorator'),
+        'should have loaded decorator with module syntax');
+      assert.ok(require.calledWith('./decorator'),
+        'should have loaded decorator with relative syntax');
+      done();
+    });
+  });
+
   function resolverOverride(resolve, request, type, cb){
     switch (type) {
     case 'partial':

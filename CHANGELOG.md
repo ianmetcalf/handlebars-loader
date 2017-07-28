@@ -10,6 +10,7 @@
 - Dropped `config` option since this is no longer supported in [webpack v2](https://webpack.js.org/guides/migrating/#loader-configuration-is-through-options)
 
 ### Added
+- Added support for decorators and `decoratorDirs` option
 - Added `ignoreHelpers` option to skip automatic lookup/bundling of helpers
 - Added `precompileOptions` to pass options to handlebars precompile
 - Your feature here!

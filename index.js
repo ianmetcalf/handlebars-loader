@@ -41,6 +41,7 @@ module.exports = function(source) {
 
   const partialDirs = [].concat(options.partialDirs || []);
   const helperDirs = [].concat(options.helperDirs || []);
+  const decoratorDirs = [].concat(options.decoratorDirs || []);
 
   // Possible extensions for partials
   let extensions = options.extensions || [".handlebars", ".hbs", ""];
@@ -83,6 +84,8 @@ module.exports = function(source) {
     if (type === 'partial') {
       contexts = partialDirs.concat(contexts);
       exts = extensions.slice();
+    } else if (type === 'decorator') {
+      contexts = decoratorDirs.concat(contexts);
     } else {
       contexts = helperDirs.concat(contexts);
     }
@@ -172,6 +175,17 @@ module.exports = function(source) {
 
         break;
 
+      case 'decorator':
+        key = `*${ name }`;
+
+        if (!foundStuff[key]) {
+          foundStuff[key] = null;
+        } else if (foundStuff[key].length) {
+          return `__default(require(${ JSON.stringify(foundStuff[key]) }))`;
+        }
+
+        break;
+
       case 'context':
         key = `?${ name }`;
 
@@ -252,6 +266,7 @@ module.exports = function(source) {
         '>': 'partial',
         '#': 'helper',
         '?': 'unclear',
+        '*': 'decorator',
       }[key[0]];
 
       const request = referenceToRequest(name, type);
