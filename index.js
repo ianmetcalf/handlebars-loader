@@ -1,9 +1,8 @@
 var loaderUtils = require("loader-utils");
 var handlebars = require("handlebars");
-var async = require("async");
+var asyncLib = require("async");
 var util = require("util");
 var path = require("path");
-var assign = require("object-assign");
 var fastreplace = require('./lib/fastreplace');
 var findNestedRequires = require('./lib/findNestedRequires');
 
@@ -23,7 +22,7 @@ function getLoaderConfig(loaderContext) {
   var configKey = query.config || 'handlebarsLoader';
   var config = (loaderContext.rootContext ? loaderContext.rootContext[configKey] : loaderContext.options[configKey]) || {};
   delete query.config;
-  return assign({}, config, query);
+  return Object.assign({}, config, query);
 }
 
 module.exports = function(source) {
@@ -191,7 +190,7 @@ module.exports = function(source) {
     var ast = null;
 
     // Compile options
-    var opts = assign({
+    var opts = Object.assign({
       knownHelpersOnly: !firstCompile,
       // TODO: Remove these in next major release
       preventIndent: !!query.preventIndent,
@@ -392,7 +391,7 @@ module.exports = function(source) {
       }
 
       // Resolve path for each item
-      async.each(itemKeys, iterator, callback);
+      asyncLib.each(itemKeys, iterator, callback);
     };
 
     var resolvePartials = function(err) {
