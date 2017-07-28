@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Breaking
+- Missing partials no longer cause errors allowing for inline partials at runtime, use `resolver` option to restore errors
+- Dropped `partialResolver` and `helperResolver`, use `resolver` option instead to customize resolution
+- Dropped `ignorePartials` and `ignoreHelpers`, use `resolver` option instead to ignore items
+- Dropped `preventIndent` and `compat` options, use `precompileOptions` instead to pass these options to precompile
+- Dropped `config` option since this is no longer supported in [webpack v2](https://webpack.js.org/guides/migrating/#loader-configuration-is-through-options)
+
 ### Added
 - Added `ignoreHelpers` option to skip automatic lookup/bundling of helpers
 - Added `precompileOptions` to pass options to handlebars precompile

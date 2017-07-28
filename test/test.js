@@ -122,101 +122,61 @@ describe('handlebars-loader', function () {
     });
   });
 
-  var partialResolverOverride = function partialResolverOverride(request, cb){
-    switch(request) {
+  function resolverOverride(resolve, request, type, cb){
+    switch (type) {
     case 'partial':
-      cb(null, 'test');
+      switch(request) {
+      case 'partial':
+        return cb(null, 'test');
+      case './partial':
+        return cb(null, './test');
+      }
       break;
-    case '$partial':
-      cb(null, './test');
+
+    case 'helper':
+      switch(request) {
+      case './image':
+        return cb(null, './helpers/image.js');
+      case './json':
+        return cb(null, './helpers2/json.js');
+      }
       break;
     }
-  };
 
-  var testPartialResolver = function testPartialResolver(expectation, options, config){
-    it(expectation, function (done) {
-      testTemplate(loader, './with-partials.handlebars', {
-        stubs: {
-          './test': require('./partial.handlebars'),
-          'test': require('./partial.handlebars')
-        },
-        query: {
-          config: config
-        },
-        options: options,
-        data: TEST_TEMPLATE_DATA
-      }, function (err, output, require) {
-        assert.ok(output, 'generated output');
-        assert.ok(require.calledWith('test'),
-          'should have loaded partial with module syntax');
-        assert.ok(require.calledWith('./test'),
-          'should have loaded partial with relative syntax');
-        done();
-      });
+    return cb();
+  }
+
+  it('should use the resolver for partials if specified', function (done) {
+    testTemplate(loader, './with-partials.handlebars', {
+      stubs: {
+        './test': require('./partial.handlebars'),
+        'test': require('./partial.handlebars')
+      },
+      query: {
+        resolver: resolverOverride
+      },
+      data: TEST_TEMPLATE_DATA
+    }, function (err, output, require) {
+      assert.ok(output, 'generated output');
+      assert.ok(require.calledWith('test'),
+        'should have loaded partial with module syntax');
+      assert.ok(require.calledWith('./test'),
+        'should have loaded partial with relative syntax');
+      done();
     });
-  };
+  });
 
-  testPartialResolver(
-    'should use the partialResolver if specified', {
-      handlebarsLoader: {
-        partialResolver: partialResolverOverride
-      }
-    }
-  );
-
-  testPartialResolver(
-    'honors the config query option when finding the partialResolver', {
-      handlebarsLoaderOverride: {
-        partialResolver: partialResolverOverride
-      }
-    },
-    'handlebarsLoaderOverride'
-  );
-
-  var helperResolverOverride = function helperResolverOverride(request, cb){
-    switch(request) {
-    case './image':
-      cb(null, './helpers/image.js');
-      break;
-    case './json':
-      cb(null, './helpers2/json.js');
-      break;
-    default:
-      cb();
-    }
-  };
-
-  var testHelperResolver = function testHelperResolver(expectation, options, config){
-    it(expectation, function (done) {
-      testTemplate(loader, './with-dir-helpers-multiple.handlebars', {
-        query: {
-          config: config
-        },
-        options: options,
-        data: TEST_TEMPLATE_DATA
-      }, function (err, output, require) {
-        assert.ok(output, 'generated output');
-        done();
-      });
+  it('should use the resolver for helpers if specified', function (done) {
+    testTemplate(loader, './with-dir-helpers-multiple.handlebars', {
+      query: {
+        resolver: resolverOverride
+      },
+      data: TEST_TEMPLATE_DATA
+    }, function (err, output, require) {
+      assert.ok(output, 'generated output');
+      done();
     });
-  };
-
-  testHelperResolver(
-    'should use the helperResolver if specified', {
-      handlebarsLoader: {
-        helperResolver: helperResolverOverride
-      }
-    }
-  );
-
-  testHelperResolver(
-    'honors the config query option when finding the helperResolver', {
-      handlebarsLoaderOverride: {
-        helperResolver: helperResolverOverride
-      }
-    },
-    'handlebarsLoaderOverride'
-  );
+  });
 
   it('allows specifying additional helper search directory', function (done) {
     testTemplate(loader, './with-dir-helpers.handlebars', {
@@ -331,17 +291,16 @@ describe('handlebars-loader', function () {
   it('allows overriding the handlebars runtime path', function (done) {
     var templateStub = getStubbedHandlebarsTemplateFunction();
     var handlebarsAPI = { template: templateStub };
+    var runtimePath = require.resolve('handlebars/runtime');
+
+    var stubs = {};
+    stubs[runtimePath] = handlebarsAPI;
 
     testTemplate(loader, './simple.handlebars', {
-      query: '?runtime=handlebars/runtime.js', // runtime actually gets required() as part of version check, so we specify real path to runtime but specify the extension so we know loader is using our custom version.
-      stubs: {
-        'handlebars/runtime.js': {
-          default: handlebarsAPI
-        }
-      }
+      stubs: stubs,
     }, function (err, output, require) {
       assert.ok(output, 'generated output');
-      assert.ok(require.calledWith('handlebars/runtime.js'),
+      assert.ok(require.calledWith(runtimePath),
         'should have required handlebars runtime from user-specified path');
       assert.ok(!require.calledWith('handlebars/runtime'),
         'should not have required default handlebars runtime');
@@ -351,8 +310,7 @@ describe('handlebars-loader', function () {
 
   it('supports either the CommonJS or ES6 style of the handlebars runtime', function (done) {
     var templateStub = getStubbedHandlebarsTemplateFunction();
-    // The loader will require the runtime by absolute path, need to know that
-    // in order to stub it properly
+    var handlebarsAPI = { template: templateStub };
     var runtimePath = require.resolve('handlebars/runtime');
 
     function testWithHandlebarsAPI(api) {
@@ -366,8 +324,11 @@ describe('handlebars-loader', function () {
     }
 
     async.series([
-      testWithHandlebarsAPI({ template: templateStub }), // CommonJS style
-      testWithHandlebarsAPI({ default: { template: templateStub } }) // ES6 style
+      testWithHandlebarsAPI(handlebarsAPI),
+      testWithHandlebarsAPI({
+        __esModule: true,
+        default: handlebarsAPI
+      })
     ], function (err, results) {
       assert.ok(!err, 'no errors');
       assert.ok(results.filter(Boolean).length === 2, 'generated output');
@@ -410,7 +371,10 @@ describe('handlebars-loader', function () {
 
     // Need to set up a stubbed handlebars runtime that has our known helper loaded in
     var Handlebars = require('handlebars/runtime').default.create();
-    stubs[runtimePath] = Handlebars;
+    stubs[runtimePath] = {
+      __esModule: true,
+      default: Handlebars
+    };
     Handlebars.registerHelper('someKnownHelper', function () {
       return 'some known helper';
     });
@@ -526,13 +490,20 @@ describe('handlebars-loader', function () {
 
     // Need to set up a stubbed handlebars runtime that has our known helper loaded in
     var Handlebars = require('handlebars/runtime').default.create();
-    stubs[runtimePath] = Handlebars;
+    stubs[runtimePath] = {
+      __esModule: true,
+      default: Handlebars
+    };
     Handlebars.registerHelper('someKnownHelper', function () {
       return 'some known helper';
     });
 
     testTemplate(loader, './with-known-helpers.handlebars', {
-      query: '?ignoreHelpers',
+      query: {
+        resolver(resolve, request, type, callback) {
+          callback();
+        }
+      },
       stubs: stubs
     }, function (err, output, require) {
       assert.ok(output, 'generated output');
