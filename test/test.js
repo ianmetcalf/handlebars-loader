@@ -315,7 +315,7 @@ describe('handlebars-loader', function () {
 
   it('allows specifying inline requires', function (done) {
     testTemplate(loader, './with-inline-requires.handlebars', {
-      query: '?inlineRequires=^images\/',
+      query: '?inlineRequires=^images/',
       stubs: {
         './image': function (text) { return 'Image URL: ' + text; },
         'images/path/to/image': 'http://www.gravatar.com/avatar/205e460b479e2e5b48aec07710c08d50'
@@ -458,7 +458,7 @@ describe('handlebars-loader', function () {
 
   it('should find helpers and partials if inlineRequires is set', function (done) {
     testTemplate(loader, './with-partials-helpers-inline-requires.handlebars', {
-      query: '?inlineRequires=^images\/',
+      query: '?inlineRequires=^images/',
       stubs: {
         './partial': require('./partial.handlebars'),
         'partial': require('./partial.handlebars'),
